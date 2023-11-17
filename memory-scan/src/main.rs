@@ -1,8 +1,13 @@
+use std::time::Duration;
+
+use aya::maps::HashMap;
 use aya::programs::TracePoint;
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
 use log::{debug, info, warn};
+use tokio::runtime::Runtime;
 use tokio::signal;
+use tokio::time::{self, Instant};
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -39,8 +44,11 @@ async fn main() -> Result<(), anyhow::Error> {
     program.load()?;
     program.attach("exceptions", "page_fault_user")?;
 
+    let mut address_map: HashMap<_, i64, i64> = HashMap::try_from(bpf.map_mut("MAP").unwrap())?;
+    address_map.pin("/sys/fs/bpf/memory-scan");
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
+
     info!("Exiting...");
 
     Ok(())
