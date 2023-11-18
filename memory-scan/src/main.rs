@@ -1,5 +1,6 @@
 mod analyzer;
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use aya::maps::HashMap;
@@ -7,7 +8,7 @@ use aya::programs::TracePoint;
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
 use log::{debug, info, warn};
-use tokio::{signal, time};
+use tokio::time;
 
 use crate::analyzer::MemoryHotMap;
 
@@ -45,21 +46,33 @@ async fn main() -> Result<(), anyhow::Error> {
     program.load()?;
     program.attach("exceptions", "page_fault_user")?;
 
-    let mut address_map: HashMap<_, i64, i64> = HashMap::try_from(bpf.map_mut("MAP").unwrap())?;
+    let temp: HashMap<_, i64, i64> = HashMap::try_from(bpf.map_mut("MAP").unwrap())?;
 
-    let memory_hot_map: MemoryHotMap<i64, i64> = MemoryHotMap::new();
-    memory_hot_map.take_from_bpfmap(address_map);
+    let address_map = Arc::new(Mutex::new(temp));
+
+    let memory_hot_map = Arc::new(MemoryHotMap::new());
     // address_map.pin("/sys/fs/bpf/memory-scan");
     info!("Waiting for Ctrl-C...");
+    // Spawn a task to listen for the Ctrl+C signal
+    let signal = tokio::signal::ctrl_c();
+    let memory_hot_map_clone = Arc::clone(&memory_hot_map);
+    tokio::spawn(async move {
+        signal.await.expect("failed to receive Ctrl+C signal");
+        memory_hot_map_clone
+            .clone()
+            .save_to_file("./map.csv")
+            .expect("failed to save hot map to file");
+        std::process::exit(0);
+    });
+    let memory_hot_map_clone = Arc::clone(&memory_hot_map);
     // Periodically execute memory_hot_map.take_from_bpfmap(address_map)
     loop {
-        memory_hot_map.take_from_bpfmap(address_map);
+        memory_hot_map_clone.take_from_bpfmap(address_map.clone());
 
         // Adjust the sleep duration as needed
-        time::sleep(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_millis(1000)).await;
+
+        // println!("Memory hotmap :{}", memory_hot_map);
+        println!("Memory hotmap size:{}", memory_hot_map.len());
     }
-
-    info!("Exiting...");
-
-    Ok(())
 }
