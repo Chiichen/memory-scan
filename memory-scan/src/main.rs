@@ -1,3 +1,5 @@
+mod analyzer;
+
 use std::time::Duration;
 
 use aya::maps::HashMap;
@@ -5,14 +7,13 @@ use aya::programs::TracePoint;
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
 use log::{debug, info, warn};
-use tokio::runtime::Runtime;
-use tokio::signal;
-use tokio::time::{self, Instant};
+use tokio::{signal, time};
+
+use crate::analyzer::MemoryHotMap;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
-
     // Bump the memlock rlimit. This is needed for older kernels that don't use the
     // new memcg based accounting, see https://lwn.net/Articles/837122/
     let rlim = libc::rlimit {
@@ -45,9 +46,18 @@ async fn main() -> Result<(), anyhow::Error> {
     program.attach("exceptions", "page_fault_user")?;
 
     let mut address_map: HashMap<_, i64, i64> = HashMap::try_from(bpf.map_mut("MAP").unwrap())?;
-    address_map.pin("/sys/fs/bpf/memory-scan");
+
+    let memory_hot_map: MemoryHotMap<i64, i64> = MemoryHotMap::new();
+    memory_hot_map.take_from_bpfmap(address_map);
+    // address_map.pin("/sys/fs/bpf/memory-scan");
     info!("Waiting for Ctrl-C...");
-    signal::ctrl_c().await?;
+    // Periodically execute memory_hot_map.take_from_bpfmap(address_map)
+    loop {
+        memory_hot_map.take_from_bpfmap(address_map);
+
+        // Adjust the sleep duration as needed
+        time::sleep(Duration::from_secs(10)).await;
+    }
 
     info!("Exiting...");
 
