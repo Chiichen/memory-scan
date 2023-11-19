@@ -1,2 +1,3 @@
 [workspace]
 members = ["xtask", "memory-scan", "memory-scan-common"]
+resolver = "2"

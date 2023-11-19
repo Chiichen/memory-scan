@@ -1,44 +1,50 @@
 import argparse
-from matplotlib import ticker
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-def hex_format(x, pos):
-    # 将整数转换为十六进制字符串
-    return f'{int(x):X}'
+from scipy.ndimage.filters import gaussian_filter
+# def hex_format(x, pos):
+#     # 将整数转换为十六进制字符串
+#     return str(hex(x))
 
 
 def generate_bar_chart(csv_file):
     # 读取 CSV 文件
-    data = pd.read_csv(csv_file, header=None, names=['Key', 'Value'])
-
+    data = pd.read_csv(csv_file, header=None, names=['Key', 'Value'],dtype = {'Key' : int,'Value':int}).sort_values(by="Key",ascending=True)
+    
     data['Column'] = 1
 
     # 绘制柱状图
-    pivot_table = data.pivot_table(values='Value', index='Key', columns='Column').sort_index(
-    axis=0, ascending=False)
+    pivot_table = data.pivot_table(values='Value', index='Key', columns='Column')
 
     # 计算value的95%阈值
-    threshold = pivot_table.values.max() * 0.05
-    print(pivot_table)
+    threshold = pivot_table.values.max() * 0.2
+
     # 过滤掉value低于95%阈值的数据
     filtered_pivot_table = pivot_table[pivot_table.values >= threshold]
 
+    plt.figure(figsize=(12,12))
 
     # 绘制热力图
     sns.heatmap(filtered_pivot_table, cmap='Reds')
 
-    # 创建自定义刻度格式化器
-    formatter = ticker.FuncFormatter(hex_format)
+    # 获取y轴刻度的数量
+    num_ticks = filtered_pivot_table.shape[0]
+    
+    # 生成20个均匀刻度
+    yticks = np.linspace(0, num_ticks - 1, 20, dtype=int)
 
-    # 应用自定义刻度格式化器到纵坐标轴
-    plt.gca().yaxis.set_major_formatter(formatter)
+    max_label = filtered_pivot_table.index.max()
+    ylabels = np.linspace(0, max_label - 1, 20, dtype=int)
+    # 设置刻度位置和标签
+    plt.yticks(yticks, [hex(i) for i in ylabels])
+
     plt.xlabel('Time/sec')
     plt.ylabel('Address Space')
     plt.title('Heatmap')
+
     plt.savefig('./map.svg')
-    # plt.show()
 
 # 创建命令行参数解析器
 parser = argparse.ArgumentParser(description='Generate a bar chart from a CSV file.')

@@ -6,7 +6,7 @@ use aya_bpf::{
     maps::HashMap,
     programs::TracePointContext,
 };
-use aya_log_ebpf::{error, info};
+use aya_log_ebpf::error;
 
 // 暂时设置为 u32 最大值
 #[map]
