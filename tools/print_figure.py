@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.ndimage.filters import gaussian_filter
 # def hex_format(x, pos):
 #     # 将整数转换为十六进制字符串
 #     return str(hex(x))
@@ -18,11 +17,13 @@ def generate_bar_chart(csv_file):
     # 绘制柱状图
     pivot_table = data.pivot_table(values='Value', index='Key', columns='Column')
 
-    # 计算value的95%阈值
-    threshold = pivot_table.values.max() * 0.2
+    # # 计算value的20%阈值
+    # threshold = pivot_table.values.max() * 0.2
 
-    # 过滤掉value低于95%阈值的数据
-    filtered_pivot_table = pivot_table[pivot_table.values >= threshold]
+    # # 过滤掉value低于20%阈值的数据
+    # filtered_pivot_table = pivot_table[pivot_table.values >= threshold]
+
+    filtered_pivot_table = pivot_table
 
     plt.figure(figsize=(12,12))
 
@@ -44,7 +45,7 @@ def generate_bar_chart(csv_file):
     plt.ylabel('Address Space')
     plt.title('Heatmap')
 
-    plt.savefig('./map.svg')
+    plt.savefig('./map.eps')
 
 # 创建命令行参数解析器
 parser = argparse.ArgumentParser(description='Generate a bar chart from a CSV file.')

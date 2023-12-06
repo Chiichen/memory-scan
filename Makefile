@@ -4,5 +4,12 @@ run:
 build-ebpf:
 	cargo xtask build-ebpf
 
-print:
+raw-print:
 	python ./tools/print_figure.py ./map.csv
+
+sort:
+	python ./tools/sort.py ./map.csv
+
+print:
+	python ./tools/sort.py ./map.csv
+	python ./tools/print_figure.py ./sorted_csv.csv
