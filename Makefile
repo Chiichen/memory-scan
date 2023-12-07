@@ -13,3 +13,7 @@ sort:
 print:
 	python ./tools/sort.py ./map.csv
 	python ./tools/print_figure.py ./sorted_csv.csv
+
+print-count:
+	python ./tools/print_value_counts.py ./map.csv
+

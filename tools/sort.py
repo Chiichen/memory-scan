@@ -14,10 +14,10 @@ def sort_csv_file(input_file, output_file):
     print(max_key)
     max_value = int(max_key[1])
     # max_value = int(sorted_lines[-1][0])
-    threshold = max_value * 0.05
-
+    mix_threshold = int(max_value*0.1)
+    max_threshold = int(max_value*0.99)
     # Filter out data points less than 10% of the maximum value
-    filtered_lines = [line for line in sorted_lines if int(line[1]) >= threshold]
+    filtered_lines = [line for line in sorted_lines if int(line[1]) >= mix_threshold & int(line[1])<=max_threshold]
     print(len(filtered_lines))
     # Write the filtered lines to a new CSV file
     with open(output_file, 'w', newline='') as file:
